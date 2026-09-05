@@ -7,3 +7,4 @@ $routes->get('/', 'Home::index');
 
 // API
 $routes->post('api/registrations', 'Api\Registrations::store');
+$routes->get('api/check-redundancy', 'Api\Registrations::checkRedundancy');
