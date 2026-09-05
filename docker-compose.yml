@@ -1,0 +1,37 @@
+services:
+
+  codeigniter4:
+    image: shinsenter/codeigniter4:php8.4-apache   # pin versi
+    container_name: vaksira-api
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - .:/var/www/html
+    restart: unless-stopped
+    depends_on:
+      - db
+    env_file:
+      - .env
+    networks:
+      - rpg-api-network
+
+  db:
+    image: mysql:8.0
+    container_name: vaksira-api-db
+    env_file:
+      - .env
+    volumes:
+      - db_data:/var/lib/mysql
+    ports:
+      - "3306:3306"   # bind ke localhost saja
+    restart: unless-stopped
+    networks:
+      - rpg-api-network
+
+volumes:
+  db_data:
+
+networks:
+  rpg-api-network:
+    driver: bridge
