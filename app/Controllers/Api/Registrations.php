@@ -69,9 +69,67 @@ class Registrations extends BaseController
             ->setJSON([
                 'status'  => 'success',
                 'message' => 'Registrasi berhasil disimpan',
-                'data'    => $this->camelCase($model->find($id)),
+                'data'    => $model->find($id),
             ]);
     }
+
+    public function checkRedundancy(): ResponseInterface
+    {
+        $json  = $this->request->getJSON(true);
+        $input = is_array($json) ? $json : $this->request->getPost();
+
+        // $validation = \Config\Services::validation();
+        // $validation->setRules($this->rules(), $this->messages());
+
+        // if (! $validation->run($input)) {
+        //     return $this->response
+        //         ->setStatusCode(ResponseInterface::HTTP_UNPROCESSABLE_ENTITY)
+        //         ->setJSON([
+        //             'status'  => 'error',
+        //             'message' => 'Validasi gagal',
+        //             'errors'  => $validation->getErrors(),
+        //         ]);
+        // }
+
+        // $data = [
+        //     'mother_name'  => $input['motherName'],
+        //     'dob_baby'     => $input['dobBaby'],
+        //     'gender_baby'  => $input['genderBaby'],
+        //     'district'     => $input['district'],
+        //     'subdistrict'  => $input['subdistrict'],
+        //     'village'      => $input['village'],
+        //     'whatsapp'     => $input['whatsapp'],
+        //     'email'        => $input['email'],
+        // ];
+
+        $model = model(RegistrationModel::class);
+        $id    = $model->checkRedundancy(
+            $input['motherName'],
+            $input['dobBaby'],
+            $input['whatsapp']
+        );
+
+        if ($id === false) {
+            return $this->response
+                ->setStatusCode(ResponseInterface::HTTP_INTERNAL_SERVER_ERROR)
+                ->setJSON([
+                    'status'  => 'error',
+                    'message' => 'Gagal mengambil data',
+                ]);
+        }
+
+        return $this->response
+            ->setStatusCode(ResponseInterface::HTTP_CREATED)
+            ->setJSON([
+                'status'  => 'success',
+                'message' => 'Data Registrasi berhasil diambil',
+                'data'    => $id,
+            ]);
+    }
+
+
+    // ===========================
+    // Rules and Validation Messages
 
     /**
      * @return array<string, string>
@@ -107,39 +165,4 @@ class Registrations extends BaseController
         ];
     }
 
-    /**
-     * Convert snake_case DB columns back to the camelCase API field names.
-     *
-     * @param array<string, mixed>|null $row
-     * @return array<string, mixed>|null
-     */
-    private function camelCase(?array $row): ?array
-    {
-        if ($row === null) {
-            return null;
-        }
-
-        $map = [
-            'id'          => 'id',
-            'mother_name' => 'motherName',
-            'dob_baby'    => 'dobBaby',
-            'gender_baby' => 'genderBaby',
-            'district'    => 'district',
-            'subdistrict' => 'subdistrict',
-            'village'     => 'village',
-            'whatsapp'    => 'whatsapp',
-            'email'       => 'email',
-            'created_at'  => 'createdAt',
-            'updated_at'  => 'updatedAt',
-        ];
-
-        $result = [];
-        foreach ($map as $column => $field) {
-            if (array_key_exists($column, $row)) {
-                $result[$field] = $column === 'id' ? (int) $row[$column] : $row[$column];
-            }
-        }
-
-        return $result;
-    }
 }

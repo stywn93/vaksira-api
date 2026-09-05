@@ -23,4 +23,15 @@ class RegistrationModel extends Model
         'whatsapp',
         'email',
     ];
+
+    public function checkRedundancy($motherName, $dobBaby, $whatsapp): array{
+        $query = $this->db->table($this->table)
+            ->select('COUNT(*) AS count')
+            ->where('mother_name', $motherName)
+            ->where('dob_baby', $dobBaby)
+            ->where('whatsapp', $whatsapp)
+            ->get();
+        
+        return $query->getRowArray();
+    }
 }
