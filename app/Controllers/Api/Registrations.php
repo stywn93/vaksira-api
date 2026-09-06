@@ -107,14 +107,34 @@ class Registrations extends BaseController
         $generatedSchedules = [];
 
         // Generate the schedule for the registration
+        // remember, this is what they called 'happy flow'
+        // it means that there is nothing system will do when the user input vaccination status
+        // in fact, there is multidose vaccine that require minimum interval range of given dose
         foreach ($scheduleMasters as $master) {
             $date = new DateTimeImmutable($input['dobBaby']);
             $data = [
                 'id_schedule'       => $master['id'],
                 'ideal_start_date'  => $date->modify('+'.$master['min_age_months'].' months')->format('d F Y'),
-                'ideal_end_date'    => $date->modify('+'.($master['max_age_months'] + 1).' months - 1 days')->format('d F Y'),
-                'actual_date'       => null,
+                'ideal_end_date'    => $master['id'] == 1 ?  $date->modify('+'.$master['min_age_months'].' months')->format('d F Y') : $date->modify('+'.($master['max_age_months'] + 1).' months - 1 days')->format('d F Y'),
             ];
+
+
+            if ($master['has_catch_up'] == 1) {
+                $data['catchup_start_date'] = $date->modify('+'.$master['min_catch_up_months'].' months')->format('d F Y');
+                $data['catchup_end_date'] = $date->modify('+'.($master['max_catch_up_months'] + 1).' months - 1 days')->format('d F Y');
+            } else {
+                $data['catchup_start_date'] = 'Tidak ada susulan';
+                $data['catchup_end_date'] = 'Tidak ada susulan';
+            }
+
+            if ($master['has_last_catch_up'] == 1) {
+                $data['last_catchup_start_date'] = $date->modify('+'.$master['min_last_catch_up_months'].' months')->format('d F Y');
+                $data['last_catchup_end_date'] = $date->modify('+'.($master['max_last_catch_up_months'] + 1).' months - 1 days')->format('d F Y');
+            } else {
+                $data['last_catchup_start_date'] = 'Tidak ada susulan';
+                $data['last_catchup_end_date'] = 'Tidak ada susulan';
+            }
+
             $generatedSchedules[] = $data;
             // $scheduleRegistrationModel->insert($data);
         }
