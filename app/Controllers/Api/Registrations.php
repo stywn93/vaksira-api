@@ -113,30 +113,34 @@ class Registrations extends BaseController
         foreach ($scheduleMasters as $master) {
             $date = new DateTimeImmutable($input['dobBaby']);
             $data = [
+                'id_registration'   => $input['idRegistration'],
                 'id_schedule'       => $master['id'],
-                'ideal_start_date'  => $date->modify('+'.$master['min_age_months'].' months')->format('d F Y'),
-                'ideal_end_date'    => $master['id'] == 1 ?  $date->modify('+'.$master['min_age_months'].' months')->format('d F Y') : $date->modify('+'.($master['max_age_months'] + 1).' months - 1 days')->format('d F Y'),
+                'ideal_start_date'  => $date->modify('+'.$master['min_age_months'].' months')->format('Y-m-d'),
+                'ideal_end_date'    => $master['id'] == 1 ?  $date->modify('+'.$master['min_age_months'].' months')->format('Y-m-d') : $date->modify('+'.($master['max_age_months'] + 1).' months - 1 days')->format('Y-m-d'),
             ];
 
 
             if ($master['has_catch_up'] == 1) {
-                $data['catchup_start_date'] = $date->modify('+'.$master['min_catch_up_months'].' months')->format('d F Y');
-                $data['catchup_end_date'] = $date->modify('+'.($master['max_catch_up_months'] + 1).' months - 1 days')->format('d F Y');
+                $data['catchup_start_date'] = $date->modify('+'.$master['min_catch_up_months'].' months')->format('Y-m-d');
+                $data['catchup_end_date'] = $date->modify('+'.($master['max_catch_up_months'] + 1).' months - 1 days')->format('Y-m-d');
             } else {
-                $data['catchup_start_date'] = 'Tidak ada susulan';
-                $data['catchup_end_date'] = 'Tidak ada susulan';
+                $data['catchup_start_date'] = '';
+                $data['catchup_end_date'] = '';
             }
 
             if ($master['has_last_catch_up'] == 1) {
-                $data['last_catchup_start_date'] = $date->modify('+'.$master['min_last_catch_up_months'].' months')->format('d F Y');
-                $data['last_catchup_end_date'] = $date->modify('+'.($master['max_last_catch_up_months'] + 1).' months - 1 days')->format('d F Y');
+                $data['last_catchup_start_date'] = $date->modify('+'.$master['min_last_catch_up_months'].' months')->format('Y-m-d');
+                $data['last_catchup_end_date'] = $date->modify('+'.($master['max_last_catch_up_months'] + 1).' months - 1 days')->format('Y-m-d');
             } else {
-                $data['last_catchup_start_date'] = 'Tidak ada susulan';
-                $data['last_catchup_end_date'] = 'Tidak ada susulan';
+                $data['last_catchup_start_date'] = '';
+                $data['last_catchup_end_date'] = '';
             }
 
             $generatedSchedules[] = $data;
-            // $scheduleRegistrationModel->insert($data);
+
+
+            // let's do on inserting data to DB
+            $scheduleRegistrationModel->insert($data);
         }
 
         return $this->response
