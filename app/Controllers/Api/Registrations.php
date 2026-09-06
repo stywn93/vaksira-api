@@ -5,10 +5,14 @@ namespace App\Controllers\Api;
 use App\Controllers\BaseController;
 use App\Models\RegistrationModel;
 use CodeIgniter\HTTP\ResponseInterface;
-use App\Models\
+use DateTimeImmutable;
+use App\Models\ScheduleMasterModel;
+use App\Models\ScheduleRegistrationModel;
 
 class Registrations extends BaseController
 {
+
+    //insert new input
     public function store(): ResponseInterface
     {
         $json  = $this->request->getJSON(true);
@@ -59,6 +63,7 @@ class Registrations extends BaseController
             ]);
     }
 
+    //check input redundancy
     public function checkRedundancy(): ResponseInterface
     {
         $json  = $this->request->getJSON(true);
@@ -86,6 +91,40 @@ class Registrations extends BaseController
                 'status'  => 'success',
                 'message' => 'Data Registrasi berhasil diambil',
                 'data'    => $id,
+            ]);
+    }
+
+    public function generateSchedule(): ResponseInterface
+    {
+        $json  = $this->request->getJSON(true);
+        $input = is_array($json) ? $json : $this->request->getPost();
+
+        $scheduleMasterModel = model(ScheduleMasterModel::class);
+        $scheduleRegistrationModel = model(ScheduleRegistrationModel::class);
+
+        // Get the schedule master data
+        $scheduleMasters = $scheduleMasterModel->findAll();
+        $generatedSchedules = [];
+
+        // Generate the schedule for the registration
+        foreach ($scheduleMasters as $master) {
+            $date = new DateTimeImmutable($input['dobBaby']);
+            $data = [
+                'id_schedule'       => $master['id'],
+                'ideal_start_date'  => $date->modify('+'.$master['min_age_months'].' months')->format('d F Y'),
+                'ideal_end_date'    => $date->modify('+'.($master['max_age_months'] + 1).' months - 1 days')->format('d F Y'),
+                'actual_date'       => null,
+            ];
+            $generatedSchedules[] = $data;
+            // $scheduleRegistrationModel->insert($data);
+        }
+
+        return $this->response
+            ->setStatusCode(ResponseInterface::HTTP_CREATED)
+            ->setJSON([
+                'status'  => 'success',
+                'message' => 'Jadwal berhasil dibuat',
+                'data'    => $generatedSchedules,
             ]);
     }
 

@@ -12,7 +12,7 @@ class ScheduleMasterModel extends Model
     protected $returnType       = 'array';
     protected $useSoftDeletes   = false;
     protected $protectFields    = true;
-    protected $allowedFields    = [];
+    // protected $allowedFields    = [];
 
     protected bool $allowEmptyInserts = false;
     protected bool $updateOnlyChanged = true;
@@ -36,7 +36,7 @@ class ScheduleMasterModel extends Model
         'max_catch_up_months',
         'min_last_catch_up_months',
         'max_last_catch_up_months',
-        
+        'vaccine_sequence'
     ];
 
     // Validation
