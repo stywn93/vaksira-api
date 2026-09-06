@@ -5,24 +5,14 @@ namespace App\Controllers\Api;
 use App\Controllers\BaseController;
 use App\Models\RegistrationModel;
 use CodeIgniter\HTTP\ResponseInterface;
+use DateTimeImmutable;
+use App\Models\ScheduleMasterModel;
+use App\Models\ScheduleRegistrationModel;
 
 class Registrations extends BaseController
 {
-    /**
-     * POST /api/registrations
-     *
-     * Body (JSON or form):
-     * {
-     *   "motherName":  "Fulan",
-     *   "dobBaby":     "2010-01-01",
-     *   "genderBaby":  "L",
-     *   "district":    "Situbondo",
-     *   "subdistrict": "Patokan",
-     *   "village":     "Dawuhan",
-     *   "whatsapp":    "08123456789",
-     *   "email":       "user@example.com"
-     * }
-     */
+
+    //insert new input
     public function store(): ResponseInterface
     {
         $json  = $this->request->getJSON(true);
@@ -73,34 +63,11 @@ class Registrations extends BaseController
             ]);
     }
 
+    //check input redundancy
     public function checkRedundancy(): ResponseInterface
     {
         $json  = $this->request->getJSON(true);
         $input = is_array($json) ? $json : $this->request->getPost();
-
-        // $validation = \Config\Services::validation();
-        // $validation->setRules($this->rules(), $this->messages());
-
-        // if (! $validation->run($input)) {
-        //     return $this->response
-        //         ->setStatusCode(ResponseInterface::HTTP_UNPROCESSABLE_ENTITY)
-        //         ->setJSON([
-        //             'status'  => 'error',
-        //             'message' => 'Validasi gagal',
-        //             'errors'  => $validation->getErrors(),
-        //         ]);
-        // }
-
-        // $data = [
-        //     'mother_name'  => $input['motherName'],
-        //     'dob_baby'     => $input['dobBaby'],
-        //     'gender_baby'  => $input['genderBaby'],
-        //     'district'     => $input['district'],
-        //     'subdistrict'  => $input['subdistrict'],
-        //     'village'      => $input['village'],
-        //     'whatsapp'     => $input['whatsapp'],
-        //     'email'        => $input['email'],
-        // ];
 
         $model = model(RegistrationModel::class);
         $id    = $model->checkRedundancy(
@@ -124,6 +91,60 @@ class Registrations extends BaseController
                 'status'  => 'success',
                 'message' => 'Data Registrasi berhasil diambil',
                 'data'    => $id,
+            ]);
+    }
+
+    public function generateSchedule(): ResponseInterface
+    {
+        $json  = $this->request->getJSON(true);
+        $input = is_array($json) ? $json : $this->request->getPost();
+
+        $scheduleMasterModel = model(ScheduleMasterModel::class);
+        $scheduleRegistrationModel = model(ScheduleRegistrationModel::class);
+
+        // Get the schedule master data
+        $scheduleMasters = $scheduleMasterModel->findAll();
+        $generatedSchedules = [];
+
+        // Generate the schedule for the registration
+        // remember, this is what they called 'happy flow'
+        // it means that there is nothing system will do when the user input vaccination status
+        // in fact, there is multidose vaccine that require minimum interval range of given dose
+        foreach ($scheduleMasters as $master) {
+            $date = new DateTimeImmutable($input['dobBaby']);
+            $data = [
+                'id_schedule'       => $master['id'],
+                'ideal_start_date'  => $date->modify('+'.$master['min_age_months'].' months')->format('d F Y'),
+                'ideal_end_date'    => $master['id'] == 1 ?  $date->modify('+'.$master['min_age_months'].' months')->format('d F Y') : $date->modify('+'.($master['max_age_months'] + 1).' months - 1 days')->format('d F Y'),
+            ];
+
+
+            if ($master['has_catch_up'] == 1) {
+                $data['catchup_start_date'] = $date->modify('+'.$master['min_catch_up_months'].' months')->format('d F Y');
+                $data['catchup_end_date'] = $date->modify('+'.($master['max_catch_up_months'] + 1).' months - 1 days')->format('d F Y');
+            } else {
+                $data['catchup_start_date'] = 'Tidak ada susulan';
+                $data['catchup_end_date'] = 'Tidak ada susulan';
+            }
+
+            if ($master['has_last_catch_up'] == 1) {
+                $data['last_catchup_start_date'] = $date->modify('+'.$master['min_last_catch_up_months'].' months')->format('d F Y');
+                $data['last_catchup_end_date'] = $date->modify('+'.($master['max_last_catch_up_months'] + 1).' months - 1 days')->format('d F Y');
+            } else {
+                $data['last_catchup_start_date'] = 'Tidak ada susulan';
+                $data['last_catchup_end_date'] = 'Tidak ada susulan';
+            }
+
+            $generatedSchedules[] = $data;
+            // $scheduleRegistrationModel->insert($data);
+        }
+
+        return $this->response
+            ->setStatusCode(ResponseInterface::HTTP_CREATED)
+            ->setJSON([
+                'status'  => 'success',
+                'message' => 'Jadwal berhasil dibuat',
+                'data'    => $generatedSchedules,
             ]);
     }
 
