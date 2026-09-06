@@ -5,24 +5,10 @@ namespace App\Controllers\Api;
 use App\Controllers\BaseController;
 use App\Models\RegistrationModel;
 use CodeIgniter\HTTP\ResponseInterface;
+use App\Models\
 
 class Registrations extends BaseController
 {
-    /**
-     * POST /api/registrations
-     *
-     * Body (JSON or form):
-     * {
-     *   "motherName":  "Fulan",
-     *   "dobBaby":     "2010-01-01",
-     *   "genderBaby":  "L",
-     *   "district":    "Situbondo",
-     *   "subdistrict": "Patokan",
-     *   "village":     "Dawuhan",
-     *   "whatsapp":    "08123456789",
-     *   "email":       "user@example.com"
-     * }
-     */
     public function store(): ResponseInterface
     {
         $json  = $this->request->getJSON(true);
@@ -77,30 +63,6 @@ class Registrations extends BaseController
     {
         $json  = $this->request->getJSON(true);
         $input = is_array($json) ? $json : $this->request->getPost();
-
-        // $validation = \Config\Services::validation();
-        // $validation->setRules($this->rules(), $this->messages());
-
-        // if (! $validation->run($input)) {
-        //     return $this->response
-        //         ->setStatusCode(ResponseInterface::HTTP_UNPROCESSABLE_ENTITY)
-        //         ->setJSON([
-        //             'status'  => 'error',
-        //             'message' => 'Validasi gagal',
-        //             'errors'  => $validation->getErrors(),
-        //         ]);
-        // }
-
-        // $data = [
-        //     'mother_name'  => $input['motherName'],
-        //     'dob_baby'     => $input['dobBaby'],
-        //     'gender_baby'  => $input['genderBaby'],
-        //     'district'     => $input['district'],
-        //     'subdistrict'  => $input['subdistrict'],
-        //     'village'      => $input['village'],
-        //     'whatsapp'     => $input['whatsapp'],
-        //     'email'        => $input['email'],
-        // ];
 
         $model = model(RegistrationModel::class);
         $id    = $model->checkRedundancy(
