@@ -9,3 +9,8 @@ $routes->get('/', 'Home::index');
 $routes->post('api/registrations', 'Api\Registrations::store');
 $routes->get('api/check-redundancy', 'Api\Registrations::checkRedundancy');
 $routes->post('api/generate-immunization-schedule', 'Api\Registrations::generateSchedule');
+
+$routes->group('api/wilayah', static function ($routes) {
+    $routes->get('provinsi', 'Api\Wilayah::provinsi');
+    $routes->get('anak', 'Api\Wilayah::anak');
+});
