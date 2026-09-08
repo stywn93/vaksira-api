@@ -17,6 +17,7 @@ class RegistrationModel extends Model
         'mother_name',
         'dob_baby',
         'gender_baby',
+        'province',
         'district',
         'subdistrict',
         'village',

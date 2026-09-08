@@ -40,6 +40,7 @@ class Registrations extends BaseController
             'village'      => $input['village'],
             'whatsapp'     => $input['whatsapp'],
             'email'        => $input['email'],
+            'province'     => $input['province'],
         ];
 
         $model = model(RegistrationModel::class);
