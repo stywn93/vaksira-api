@@ -8,15 +8,30 @@ use CodeIgniter\HTTP\ResponseInterface;
 use DateTimeImmutable;
 use App\Models\ScheduleMasterModel;
 use App\Models\ScheduleRegistrationModel;
+use Config\Services;
+use Throwable;
 
 class Registrations extends BaseController
 {
 
     //insert new input
     public function store(): ResponseInterface
-    {
+    {   
         $json  = $this->request->getJSON(true);
         $input = is_array($json) ? $json : $this->request->getPost();
+
+        $recaptchaToken = $input['recaptcha'] ?? null;
+
+        //validate the recaptcha
+        if (! $this->verifyRecaptcha($recaptchaToken)) {
+            return $this->response
+                ->setStatusCode(ResponseInterface::HTTP_UNPROCESSABLE_ENTITY)
+                ->setJSON([
+                    'status'  => 'error',
+                    'message' => 'Verifikasi reCAPTCHA gagal.',
+                ]);
+        }
+        //end of recaptcha validaton
 
         $validation = \Config\Services::validation();
         $validation->setRules($this->rules(), $this->messages());
@@ -42,26 +57,91 @@ class Registrations extends BaseController
             'email'        => $input['email'],
             'province'     => $input['province'],
         ];
+        
+        //start trans
+        $db = db_connect();
+        $db->transBegin();
+        try {
+            $model = model(RegistrationModel::class);
+            $id    = $model->insert($data);
 
-        $model = model(RegistrationModel::class);
-        $id    = $model->insert($data);
+            if($id === false){
+                throw new \RuntimeException('Gagal menyimpan data bayi');
+            }
 
-        if ($id === false) {
+            $schedules = $this->generateSchedule(
+                (int) $id,
+                $input['dobBaby']
+            );
+            if($db->transStatus() === false){
+                throw new \RuntimeException('Gagal membuat jadwal imunisasi');
+            }
+            if (! $db->transCommit()) {
+                throw new \RuntimeException('Gagal menyelesaikan transaksi.');
+            }
+            // $db->transCommit();
+            return $this->response
+                ->setStatusCode(ResponseInterface::HTTP_CREATED)
+                ->setJSON([
+                    'status' => 'success',
+                    'message' => 'Registrasi dan jadwal berhasil dibuat.',
+                    'data' => [
+                        'registration' => $model->find($id),
+                        'schedules' => $schedules,
+                    ],
+                ]);
+        } catch (\Throwable $exception) {
+            $db->transRollback();
+
+            log_message('error', 'Registration transaction failed: {message}', [
+                'message' => $exception->getMessage(),
+            ]);
+
             return $this->response
                 ->setStatusCode(ResponseInterface::HTTP_INTERNAL_SERVER_ERROR)
                 ->setJSON([
-                    'status'  => 'error',
-                    'message' => 'Gagal menyimpan data',
+                    'status' => 'error',
+                    'message' => 'Registrasi gagal disimpan.',
                 ]);
         }
+    }
 
-        return $this->response
-            ->setStatusCode(ResponseInterface::HTTP_CREATED)
-            ->setJSON([
-                'status'  => 'success',
-                'message' => 'Registrasi berhasil disimpan',
-                'data'    => $model->find($id),
+
+    private function verifyRecaptcha(?string $token): bool
+    {
+        $secret = env('RECAPTCHA_SECRET_KEY');
+
+        if (! $secret || ! $token) {
+            return false;
+        }
+
+        try {
+            $client = Services::curlrequest([
+                'timeout' => 5,
             ]);
+
+            $response = $client->post(
+                'https://www.google.com/recaptcha/api/siteverify',
+                [
+                    'form_params' => [
+                        'secret'   => $secret,
+                        'response' => $token,
+                        'remoteip' => $this->request->getIPAddress(),
+                    ],
+                    'http_errors' => false,
+                ]
+            );
+
+            $result = json_decode($response->getBody(), true);
+
+            return ($result['success'] ?? false) === true;
+        } catch (Throwable $exception) {
+            log_message('error', 'reCAPTCHA verification failed: {message}', [
+                'message' => $exception->getMessage(),
+            ]);
+
+            return false;
+        }
     }
 
     //check input redundancy
@@ -95,10 +175,10 @@ class Registrations extends BaseController
             ]);
     }
 
-    public function generateSchedule(): ResponseInterface
+    private function generateSchedule(int $registrationId, string $dobBaby): array
     {
-        $json  = $this->request->getJSON(true);
-        $input = is_array($json) ? $json : $this->request->getPost();
+        // $json  = $this->request->getJSON(true);
+        // $input = is_array($json) ? $json : $this->request->getPost();
 
         $scheduleMasterModel = model(ScheduleMasterModel::class);
         $scheduleRegistrationModel = model(ScheduleRegistrationModel::class);
@@ -112,12 +192,13 @@ class Registrations extends BaseController
         // it means that there is nothing system will do when the user input vaccination status
         // in fact, there is multidose vaccine that require minimum interval range of given dose
         foreach ($scheduleMasters as $master) {
-            $date = new DateTimeImmutable($input['dobBaby']);
+            $date = new DateTimeImmutable($dobBaby);
             $data = [
-                'id_registration'   => $input['idRegistration'],
+                'id_registration'   => $registrationId,
                 'id_schedule'       => $master['id'],
                 'ideal_start_date'  => $date->modify('+'.$master['min_age_months'].' months')->format('Y-m-d'),
                 'ideal_end_date'    => $master['id'] == 1 ?  $date->modify('+'.$master['min_age_months'].' months')->format('Y-m-d') : $date->modify('+'.($master['max_age_months'] + 1).' months - 1 days')->format('Y-m-d'),
+                'status'            => 'pending',
             ];
 
 
@@ -141,16 +222,13 @@ class Registrations extends BaseController
 
 
             // let's do on inserting data to DB
-            $scheduleRegistrationModel->insert($data);
+           $inserted = $scheduleRegistrationModel->insert($data);
+           if($inserted === false){
+            throw new \RuntimeException('Gagal membuat data imunisasi');
+           }
         }
 
-        return $this->response
-            ->setStatusCode(ResponseInterface::HTTP_CREATED)
-            ->setJSON([
-                'status'  => 'success',
-                'message' => 'Jadwal berhasil dibuat',
-                'data'    => $generatedSchedules,
-            ]);
+        return $generatedSchedules;
     }
 
 
@@ -171,6 +249,7 @@ class Registrations extends BaseController
             'village'     => 'required|max_length[100]',
             'whatsapp'    => 'required|regex_match[/^\+?[0-9]{9,15}$/]',
             'email'       => 'required|valid_email|max_length[150]',
+            'recaptcha'   => 'required',
         ];
     }
 
