@@ -106,6 +106,34 @@ class Registrations extends BaseController
         }
     }
 
+    public function getSchedule(string $idRegistration): ResponseInterface
+    {
+        $scheduleRegistrationModel = model(ScheduleRegistrationModel::class);
+        try {
+            $schedules = $scheduleRegistrationModel->getByRegistrationId((int) $idRegistration);
+            return $this->response
+                ->setStatusCode(ResponseInterface::HTTP_OK)
+                ->setJSON([
+                    'status' => 'success',
+                    'message' => 'Berhasil ambil jadwal imunisasi.',
+                    'data' => [
+                        'schedules' => $schedules,
+                    ],
+                ]);
+        } catch (\Throwable $th) {
+            log_message('error', 'Registration transaction failed: {message}', [
+                'message' => $th->getMessage(),
+            ]);
+
+            return $this->response
+                ->setStatusCode(ResponseInterface::HTTP_INTERNAL_SERVER_ERROR)
+                ->setJSON([
+                    'status' => 'error',
+                    'message' => 'Gagal mengambil data jadwal imunisasi.',
+                ]);
+        }
+    }
+
 
     private function verifyRecaptcha(?string $token): bool
     {
@@ -177,8 +205,6 @@ class Registrations extends BaseController
 
     private function generateSchedule(int $registrationId, string $dobBaby): array
     {
-        // $json  = $this->request->getJSON(true);
-        // $input = is_array($json) ? $json : $this->request->getPost();
 
         $scheduleMasterModel = model(ScheduleMasterModel::class);
         $scheduleRegistrationModel = model(ScheduleRegistrationModel::class);
