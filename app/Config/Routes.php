@@ -10,7 +10,12 @@ $routes->post('api/registrations', 'Api\Registrations::store');
 $routes->get('api/check-redundancy', 'Api\Registrations::checkRedundancy');
 // $routes->get('api/get-schedule', 'Api\Registrations::getSchedule');
 
-$routes->get('api/get-schedule/(:num)','Api\Registrations::getSchedule/$1');
+$routes->get('api/get-schedule/(:segment)', 'Api\Registrations::getSchedule/$1');
+
+$routes->get(
+    'api/integration/v1/registrations/(:segment)/schedule',
+    'Api\Integration::schedule/$1'
+);
 
 $routes->group('api/wilayah', static function ($routes) {
     $routes->get('provinsi', 'Api\Wilayah::provinsi');

@@ -59,10 +59,10 @@ class ScheduleRegistrationModel extends Model
 
 
 
-    public function getByRegistrationId(int $idRegistration): array
+    public function getByRegistrationToken(string $token): array
 {
     $query = $this->select([
-        'sr.id_registration',
+        'r.public_token AS registration_token',
         'sm.antigen_name',
         "DATE_FORMAT(sr.ideal_start_date, '%d %M %Y') AS ideal_start_date",
         "DATE_FORMAT(sr.ideal_end_date, '%d %M %Y') AS ideal_end_date",
@@ -88,7 +88,7 @@ class ScheduleRegistrationModel extends Model
         ->join('wilayah w_district', 'w_district.kode = r.district', 'left')
         ->join('wilayah w_subdistrict', 'w_subdistrict.kode = r.subdistrict', 'left')
         ->join('wilayah w_village', 'w_village.kode = r.village', 'left')
-        ->where('sr.id_registration', $idRegistration)
+        ->where('r.public_token', $token)
         ->get();
 
     log_message('debug', 'ScheduleRegistrationModel query: ' . (string) $this->db->getLastQuery());

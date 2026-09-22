@@ -25,6 +25,15 @@ class RegistrationModel extends Model
         'email',
     ];
 
+    protected $beforeInsert = ['addPublicToken'];
+
+    protected function addPublicToken(array $data): array
+    {
+        $data['data']['public_token'] ??= bin2hex(random_bytes(16));
+
+        return $data;
+    }
+
     public function checkRedundancy($motherName, $dobBaby, $whatsapp): array{
         $query = $this->db->table($this->table)
             ->select('COUNT(*) AS count')

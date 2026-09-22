@@ -12,6 +12,8 @@ use CodeIgniter\Filters\InvalidChars;
 use CodeIgniter\Filters\PageCache;
 use CodeIgniter\Filters\PerformanceMetrics;
 use CodeIgniter\Filters\SecureHeaders;
+use App\Filters\IntegrationAuth;
+use App\Filters\RateLimit;
 
 class Filters extends BaseFilters
 {
@@ -34,6 +36,8 @@ class Filters extends BaseFilters
         'forcehttps'    => ForceHTTPS::class,
         'pagecache'     => PageCache::class,
         'performance'   => PerformanceMetrics::class,
+        'integrationauth' => IntegrationAuth::class,
+        'ratelimit'     => RateLimit::class,
     ];
 
     /**
@@ -108,5 +112,9 @@ class Filters extends BaseFilters
      */
     public array $filters = [
         'cors' => ['before' => ['api/*']],
+        'ratelimit:10,60' => ['before' => ['api/registrations']],
+        'ratelimit:30,60' => ['before' => ['api/check-redundancy', 'api/get-schedule/*']],
+        'ratelimit:120,60' => ['before' => ['api/wilayah/*', 'api/integration/*']],
+        'integrationauth' => ['before' => ['api/integration/*']],
     ];
 }
