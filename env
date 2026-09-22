@@ -26,6 +26,8 @@
 # app.forceGlobalSecureRequests = false
 # app.CSPEnabled = false
 
+# INTEGRATION_API_KEY =
+
 #--------------------------------------------------------------------
 # DATABASE
 #--------------------------------------------------------------------

@@ -54,7 +54,7 @@ class Registrations extends BaseController
             'subdistrict'  => $input['subdistrict'],
             'village'      => $input['village'],
             'whatsapp'     => $input['whatsapp'],
-            'email'        => $input['email'],
+            'email'        => $input['email'] ?? null,
             'province'     => $input['province'],
         ];
         
@@ -80,13 +80,23 @@ class Registrations extends BaseController
                 throw new \RuntimeException('Gagal menyelesaikan transaksi.');
             }
             // $db->transCommit();
+            $registration = $model->find($id);
+            $registration['token'] = $registration['public_token'];
+            unset($registration['id'], $registration['public_token']);
+
+            $schedules = array_map(static function (array $schedule): array {
+                unset($schedule['id_registration']);
+
+                return $schedule;
+            }, $schedules);
+
             return $this->response
                 ->setStatusCode(ResponseInterface::HTTP_CREATED)
                 ->setJSON([
                     'status' => 'success',
                     'message' => 'Registrasi dan jadwal berhasil dibuat.',
                     'data' => [
-                        'registration' => $model->find($id),
+                        'registration' => $registration,
                         'schedules' => $schedules,
                     ],
                 ]);
@@ -106,11 +116,27 @@ class Registrations extends BaseController
         }
     }
 
-    public function getSchedule(string $idRegistration): ResponseInterface
+    public function getSchedule(string $token): ResponseInterface
     {
         $scheduleRegistrationModel = model(ScheduleRegistrationModel::class);
         try {
-            $schedules = $scheduleRegistrationModel->getByRegistrationId((int) $idRegistration);
+            $schedules = $scheduleRegistrationModel->getByRegistrationToken($token);
+
+            if ($schedules === []) {
+                return $this->response
+                    ->setStatusCode(ResponseInterface::HTTP_NOT_FOUND)
+                    ->setJSON([
+                        'status' => 'error',
+                        'message' => 'Registrasi tidak ditemukan.',
+                    ]);
+            }
+
+            $schedules = array_map(static function (array $schedule): array {
+                unset($schedule['registration_token']);
+
+                return $schedule;
+            }, $schedules);
+
             return $this->response
                 ->setStatusCode(ResponseInterface::HTTP_OK)
                 ->setJSON([
@@ -274,7 +300,7 @@ class Registrations extends BaseController
             'subdistrict' => 'required|max_length[100]',
             'village'     => 'required|max_length[100]',
             'whatsapp'    => 'required|regex_match[/^\+?[0-9]{9,15}$/]',
-            'email'       => 'required|valid_email|max_length[150]',
+            'email'       => 'permit_empty|valid_email|max_length[150]',
             'recaptcha'   => 'required',
         ];
     }
@@ -292,7 +318,7 @@ class Registrations extends BaseController
             'subdistrict' => ['required' => 'Kecamatan wajib diisi.'],
             'village'     => ['required' => 'Desa/Kelurahan wajib diisi.'],
             'whatsapp'    => ['required' => 'Nomor WhatsApp wajib diisi.', 'regex_match' => 'Nomor WhatsApp tidak valid.'],
-            'email'       => ['required' => 'Email wajib diisi.', 'valid_email' => 'Format email tidak valid.'],
+            'email'       => ['valid_email' => 'Format email tidak valid.'],
         ];
     }
 
