@@ -18,8 +18,9 @@ class WilayahSeeder extends Seeder
             return;
         }
 
-        // Kosongkan dulu supaya seeder aman dijalankan berulang (idempotent)
-        $this->db->table('wilayah')->truncate();
+        // Kosongkan dulu tanpa TRUNCATE karena tabel ini direferensikan FK.
+        // DELETE tetap aman untuk database kosong dan menolak orphan records.
+        $this->db->query('DELETE FROM wilayah');
 
         $handle = fopen($csvPath, 'r');
         if ($handle === false) {

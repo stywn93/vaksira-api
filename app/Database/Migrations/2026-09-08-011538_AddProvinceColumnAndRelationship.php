@@ -14,7 +14,12 @@ class AddProvinceColumnAndRelationship extends Migration
         // dan menangani validasi relasi di level aplikasi saja.
         // -----------------------------------------------------------------
         $this->db->query('ALTER TABLE wilayah ENGINE = InnoDB');
-        $this->forge->dropColumn('registrations', 'province');
+
+        // Database baru belum memiliki kolom province. Database lama mungkin
+        // sudah memilikinya, jadi hapus hanya jika kolom tersebut memang ada.
+        if (in_array('province', $this->db->getFieldNames('registrations'), true)) {
+            $this->forge->dropColumn('registrations', 'province');
+        }
  
         // 1. Tambah kolom province
         $this->forge->addColumn('registrations', [
